@@ -29,6 +29,7 @@ dependencies = [
     'aiida-core~=2.0',
     'beautifulsoup4~=4.0',
     'click~=8.0',
+    'pycifrw~=4.4',
     'requests~=2.0',
     'requests-cache~=0.9',
 ]
@@ -38,6 +39,9 @@ Source = 'https://github.com/sphuber/aiida-amcsd'
 
 [project.scripts]
 aiida-amcsd = 'aiida_amcsd.cli.cli:cli'
+
+[project.entry-points.'aiida.calculations']
+'amcsd.cif_file_to_cif_data' = 'aiida_amcsd.calculations.functions.cif_file_to_cif_data:cif_file_to_cif_data'
 
 [project.optional-dependencies]
 pre-commit = [
