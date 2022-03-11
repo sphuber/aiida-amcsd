@@ -27,10 +27,14 @@ keywords = ['aiida', 'AMCSD']
 requires-python = '>=3.8'
 dependencies = [
     'aiida-core~=2.0',
+    'click~=8.0',
 ]
 
 [project.urls]
 Source = 'https://github.com/sphuber/aiida-amcsd'
+
+[project.scripts]
+aiida-amcsd = 'aiida_amcsd.cli.cli:cli'
 
 [project.optional-dependencies]
 pre-commit = [
