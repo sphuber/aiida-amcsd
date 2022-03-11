@@ -57,7 +57,7 @@ def cmd_parse(group_cif_file, group_cif_data, max_number, dry_run):
     with click.progressbar(query.all(flat=True), width=0, bar_template=bar_template) as iterator:
         for cif_file in iterator:
 
-            iterator.label = f'Parsing: {cif_file.filename}'
+            iterator.label = click.style('Parsing: ', fg='blue', bold=True) + f'{cif_file.filename}<{cif_file.pk}>'
 
             try:
                 results = cif_file_to_cif_data.run(cif_file, metadata={'store_provenance': not dry_run})
@@ -70,4 +70,4 @@ def cmd_parse(group_cif_file, group_cif_data, max_number, dry_run):
     if not dry_run:
         group_cif_data.add_nodes(cif_datas)
 
-    click.echo(click.style('Success: ', fg='green') + f'parsed and added {len(cif_datas)} nodes to `{group_cif_data}`.')
+    echo.echo_success(f'added {len(cif_datas)} nodes to `{group_cif_data}`.')

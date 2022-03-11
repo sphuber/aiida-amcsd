@@ -37,6 +37,7 @@ def cmd_scrape(group_cif_file, cache, max_number, dry_run):
     import io
     import re
 
+    from aiida.cmdline.utils import echo
     from aiida.common.files import md5_from_filelike
     from aiida.orm import SinglefileData
     import bs4
@@ -58,18 +59,18 @@ def cmd_scrape(group_cif_file, cache, max_number, dry_run):
         if href.startswith('/AMS/minerals'):
             minerals.append(href)
 
-    click.echo(click.style('Report: ', fg='blue') + f'found links for {len(minerals)} minerals.')
+    echo.echo_report(f'found links for {len(minerals)} minerals.')
 
     with click.progressbar(minerals[:max_number], width=0, bar_template='%(label)-50s [%(bar)s] %(info)s') as links:
         for link_mineral in links:
 
             mineral_name = link_mineral.split('/')[-1]
-            links.label = f'Downloading: {mineral_name}'
+            links.label = click.style('Downloading: ', fg='blue', bold=True) + mineral_name
 
             try:
                 response_mineral = requests.get(f'{base_url}{link_mineral}')
             except requests.HTTPError as exc:
-                click.echo(click.style('Error: ', fg='error') + f'retrieving link `{link_mineral}` failed: {exc}')
+                echo.echo_error(f'retrieving link `{link_mineral}` failed: {exc}')
                 continue
 
             soup_mineral = bs4.BeautifulSoup(response_mineral.text, 'html.parser')
@@ -84,28 +85,26 @@ def cmd_scrape(group_cif_file, cache, max_number, dry_run):
                 try:
                     response_cif = requests.get(link_cif)
                 except requests.HTTPError as exc:
-                    click.echo(click.style('Error: ', fg='error') + f'retrieving CIF link `{link_cif}` failed: {exc}')
+                    echo.echo_error(f'retrieving CIF link `{link_cif}` failed: {exc}')
                     continue
-
-                matches = re.match(r'^.*?id=([0-9]+)\.cif.*$', link_cif)
-                cif_id = matches.group(1)
 
                 byte_stream = io.BytesIO(response_cif.text.encode('utf-8'))
                 md5 = md5_from_filelike(byte_stream)
                 byte_stream.seek(0)
 
-                cif_file = SinglefileData(file=byte_stream, filename=f'{mineral_name}_{cif_id}.cif')
-                cif_file.set_attribute('source', {'id': cif_id, 'name': mineral_name, 'url': link_cif})
+                matches = re.match(r'^.*?id=([0-9]+)\.cif.*$', link_cif)
+                cif_file = SinglefileData(file=byte_stream, filename=f'{mineral_name}.cif')
+                cif_file.set_attribute('source', {'id': matches.group(1), 'name': mineral_name, 'url': link_cif})
                 cif_file.set_attribute('md5', md5)
 
                 cif_files.append(cif_file)
                 break
 
             else:
-                click.echo(click.style('Error: ', fg='error') + f'failed to download a CIF for {mineral_name}')
+                echo.echo_error(f'failed to download a CIF for {mineral_name}')
 
-        click.echo(click.style('Success: ', fg='green') + 'scraping completed, adding to group.')
+        echo.echo_success('scraping completed, adding to group.')
         if not dry_run:
             group_cif_file.add_nodes([cif_file.store() for cif_file in cif_files])
 
-    click.echo(click.style('Success: ', fg='green') + f'stored {len(cif_files)} CIF files in `{group_cif_file.label}`.')
+    echo.echo_success(f'stored {len(cif_files)} CIF files in `{group_cif_file.label}`.')
