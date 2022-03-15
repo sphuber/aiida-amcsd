@@ -33,7 +33,7 @@ def cmd_scrape(group_cif_file, cache, max_number, dry_run):
 
     The requests are cached which is written to a file on disk provided by the ``--cache`` option.
     """
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-statements
     import io
     import re
 
@@ -60,6 +60,8 @@ def cmd_scrape(group_cif_file, cache, max_number, dry_run):
             minerals.append(href)
 
     echo.echo_report(f'found links for {len(minerals)} minerals.')
+
+    existing_md5s = {node.get_attribute('md5') for node in group_cif_file.nodes}
 
     with click.progressbar(minerals[:max_number], width=0, bar_template='%(label)-50s [%(bar)s] %(info)s') as links:
         for link_mineral in links:
@@ -92,19 +94,21 @@ def cmd_scrape(group_cif_file, cache, max_number, dry_run):
                 md5 = md5_from_filelike(byte_stream)
                 byte_stream.seek(0)
 
-                matches = re.match(r'^.*?id=([0-9]+)\.cif.*$', link_cif)
+                if md5 in existing_md5s:
+                    echo.echo_info(f'md5 of {link_cif} already present in {group_cif_file}, skipping...')
+                    continue
+
+                identifier = re.match(r'^.*?id=([0-9]+)\.cif.*$', link_cif).group(1)
                 cif_file = SinglefileData(file=byte_stream, filename=f'{mineral_name}.cif')
-                cif_file.set_attribute('source', {'id': matches.group(1), 'name': mineral_name, 'url': link_cif})
+                cif_file.set_attribute('source', {'id': identifier, 'name': mineral_name, 'url': link_cif})
                 cif_file.set_attribute('md5', md5)
 
                 cif_files.append(cif_file)
-                break
-
-            else:
-                echo.echo_error(f'failed to download a CIF for {mineral_name}')
+                existing_md5s.add(md5)
+                continue
 
         echo.echo_success('scraping completed, adding to group.')
         if not dry_run:
-            group_cif_file.add_nodes([cif_file.store() for cif_file in cif_files])
+            group_cif_file.backend_entity.add_nodes([cif_file.store().backend_entity for cif_file in cif_files])
 
     echo.echo_success(f'stored {len(cif_files)} CIF files in `{group_cif_file.label}`.')
