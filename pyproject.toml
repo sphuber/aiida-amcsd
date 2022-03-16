@@ -26,7 +26,7 @@ classifiers = [
 keywords = ['aiida', 'AMCSD']
 requires-python = '>=3.8'
 dependencies = [
-    'aiida-core~=2.0',
+    'aiida-core~=2.0.0b1',
     'beautifulsoup4~=4.0',
     'click~=8.0',
     'pycifrw~=4.4',
